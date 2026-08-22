@@ -2,6 +2,7 @@
   "name": "my_shop_bot",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
   "postCreateCommand": "pip install -r requirements-dev.txt",
+  "postAttachCommand": "bash .devcontainer/start-bot.sh",
   "customizations": {
     "vscode": {
       "extensions": ["ms-python.python", "charliermarsh.ruff"]
