@@ -11,10 +11,26 @@ class BuyCallback(CallbackData, prefix="buy"):
     product_id: str
 
 
+class DeliveryCallback(CallbackData, prefix="delivery"):
+    """Выбор способа получения: 'delivery' — доставка, 'pickup' — самовывоз."""
+
+    method: str
+
+
 class ConfirmCallback(CallbackData, prefix="confirm"):
     """Подтверждение заказа: action — 'yes' или 'no'."""
 
     action: str
+
+
+def delivery_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="🚚 Доставка", callback_data=DeliveryCallback(method="delivery")
+    )
+    builder.button(text="🏪 Самовывоз", callback_data=DeliveryCallback(method="pickup"))
+    builder.adjust(2)
+    return builder.as_markup()
 
 
 def confirm_keyboard() -> InlineKeyboardMarkup:

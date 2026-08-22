@@ -17,7 +17,18 @@ class Order:
     product: Product
     customer_name: str
     phone: str
-    address: str
+    address: str | None  # None — покупатель забирает сам
+
+    @property
+    def самовывоз(self) -> bool:
+        return self.address is None
+
+    @property
+    def способ_получения(self) -> str:
+        """Строка для текста заказа: адрес доставки или пометка о самовывозе."""
+        if self.самовывоз:
+            return "Самовывоз"
+        return f"Доставка: {self.address}"
 
 
 def clean_name(raw: str) -> str | None:
@@ -74,7 +85,7 @@ def format_order_for_admin(order: Order, user_id: int, username: str | None) -> 
         f"Цена: {format_price(order.product.price)}\n\n"
         f"Имя: {order.customer_name}\n"
         f"Телефон: {order.phone}\n"
-        f"Адрес: {order.address}\n\n"
+        f"{order.способ_получения}\n\n"
         f"Покупатель: {contact} (id {user_id})"
     )
 
@@ -87,5 +98,5 @@ def format_order_summary(order: Order) -> str:
         f"Цена: {format_price(order.product.price)}\n"
         f"Имя: {order.customer_name}\n"
         f"Телефон: {order.phone}\n"
-        f"Адрес: {order.address}"
+        f"{order.способ_получения}"
     )
