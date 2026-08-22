@@ -5,6 +5,8 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from bot.config import Config
+
 # Router — набор обработчиков одного смыслового блока.
 # Подключается к Dispatcher в bot/__main__.py.
 router = Router(name="start")
@@ -33,13 +35,36 @@ async def handle_help(message: Message) -> None:
 
 
 @router.message(Command("id"))
-async def handle_id(message: Message) -> None:
-    """Показать Telegram ID — нужен, чтобы заполнить ADMIN_ID в .env."""
+async def handle_id(message: Message, config: Config) -> None:
+    """Показать свой ID и тот, что настроен, — и сразу сказать, сходятся ли.
+
+    Раньше команда показывала только свой ID, и сверять его с настройкой
+    приходилось вручную. Из-за этого расхождение обнаруживалось лишь тогда,
+    когда заказ не доходил.
+    """
     if message.from_user is None:
         return
 
+    свой = message.from_user.id
+    настроен = config.admin_id
+
+    if настроен is None:
+        итог = (
+            "⚠️ ADMIN_ID не задан — заказы никуда не отправляются.\n"
+            f"Впиши <code>{свой}</code> в настройки и перезапусти бота."
+        )
+    elif настроен == свой:
+        итог = "✅ Совпадают — заказы будут приходить в этот чат."
+    else:
+        итог = (
+            "❌ НЕ совпадают — поэтому заказы и не доходят.\n"
+            f"Замени ADMIN_ID на <code>{свой}</code>, "
+            "а потом пересоздай окружение: секреты подхватываются только "
+            "при создании."
+        )
+
     await message.answer(
-        f"Твой Telegram ID: <code>{message.from_user.id}</code>\n\n"
-        "Впиши его в файл .env в строку ADMIN_ID — тогда заказы будут "
-        "приходить сюда."
+        f"Твой Telegram ID: <code>{свой}</code>\n"
+        f"Сейчас в настройках ADMIN_ID: <code>{настроен}</code>\n\n"
+        f"{итог}"
     )
