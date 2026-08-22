@@ -11,7 +11,10 @@ class Config:
     """Настройки приложения. frozen=True — менять их после запуска нельзя."""
 
     bot_token: str
-    admin_id: int  # твой Telegram ID: сюда бот присылает заказы
+    # Telegram ID владельца магазина: сюда бот присылает заказы.
+    # None — если ADMIN_ID ещё не заполнен: бот запустится, чтобы можно
+    # было узнать свой ID командой /id, но заказы будут падать только в лог.
+    admin_id: int | None
 
 
 def load_config() -> Config:
@@ -30,14 +33,16 @@ def load_config() -> Config:
             "и вставь токен, который выдал @BotFather."
         )
 
-    admin_id = os.getenv("ADMIN_ID")
-    if not admin_id:
+    raw_admin_id = os.getenv("ADMIN_ID", "").strip()
+
+    if not raw_admin_id:
+        # Намеренно не падаем: иначе не запустить бота, чтобы узнать свой ID.
+        return Config(bot_token=token, admin_id=None)
+
+    if not raw_admin_id.isdigit():
         raise RuntimeError(
-            "Не найден ADMIN_ID.\n"
-            "Это твой Telegram ID — узнать его можно, отправив боту команду /id."
+            f"ADMIN_ID должен быть числом, а сейчас там: {raw_admin_id!r}\n"
+            "Нужен числовой Telegram ID, а не @username. Узнать свой — команда /id."
         )
 
-    if not admin_id.isdigit():
-        raise RuntimeError(f"ADMIN_ID должен быть числом, а сейчас там: {admin_id!r}")
-
-    return Config(bot_token=token, admin_id=int(admin_id))
+    return Config(bot_token=token, admin_id=int(raw_admin_id))

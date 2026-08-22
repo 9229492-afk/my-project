@@ -39,6 +39,12 @@ async def main() -> None:
     # начнёт отвечать на сообщения недельной давности.
     await bot.delete_webhook(drop_pending_updates=True)
 
+    if config.admin_id is None:
+        logger.warning(
+            "ADMIN_ID не заполнен — заказы будут попадать только в лог. "
+            "Отправь боту команду /id, впиши число в .env и перезапусти."
+        )
+
     logger.info("Бот запущен")
     await dispatcher.start_polling(bot)
 

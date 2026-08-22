@@ -167,6 +167,18 @@ async def accept_order(
         order, user_id=callback.from_user.id, username=callback.from_user.username
     )
 
+    if config.admin_id is None:
+        # Бот ещё не настроен до конца — заказ хотя бы не теряем.
+        logger.error("ADMIN_ID не заполнен, заказ только в логе: %s", order)
+
+        if isinstance(callback.message, Message):
+            await callback.message.edit_text(
+                "Магазин ещё настраивается, заказ пока принять не получится. "
+                "Загляни попозже!"
+            )
+        await callback.answer()
+        return
+
     try:
         await bot.send_message(config.admin_id, text)
     except TelegramAPIError:
