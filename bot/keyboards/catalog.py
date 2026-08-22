@@ -11,6 +11,7 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.catalog import Product, format_price
+from bot.keyboards.order import BuyCallback
 
 
 class ProductCallback(CallbackData, prefix="product"):
@@ -39,11 +40,16 @@ def catalog_keyboard(products: tuple[Product, ...]) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def product_keyboard() -> InlineKeyboardMarkup:
-    """Кнопка возврата из карточки товара в список."""
+def product_keyboard(product_id: str) -> InlineKeyboardMarkup:
+    """Кнопки в карточке товара: купить и вернуться к списку."""
     builder = InlineKeyboardBuilder()
+    builder.button(
+        text="🛒 Купить",
+        callback_data=BuyCallback(product_id=product_id),
+    )
     builder.button(
         text="⬅️ Назад в каталог",
         callback_data=CatalogCallback(action="back"),
     )
+    builder.adjust(1)
     return builder.as_markup()

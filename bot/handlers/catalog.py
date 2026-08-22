@@ -36,7 +36,7 @@ async def show_product(callback: CallbackQuery, callback_data: ProductCallback) 
     if isinstance(callback.message, Message):
         await callback.message.edit_text(
             format_product(product),
-            reply_markup=product_keyboard(),
+            reply_markup=product_keyboard(product.id),
         )
 
     # Telegram ждёт ответа на каждое нажатие. Без этой строки у пользователя

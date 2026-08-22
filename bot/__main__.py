@@ -8,7 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from bot.config import load_config
-from bot.handlers import catalog, start
+from bot.handlers import catalog, order, start
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +28,12 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
-    dispatcher = Dispatcher()
+    # Всё, что передано в Dispatcher(...), aiogram подставит в обработчики
+    # по имени аргумента — так config попадает в accept_order.
+    dispatcher = Dispatcher(config=config)
     dispatcher.include_router(start.router)
     dispatcher.include_router(catalog.router)
+    dispatcher.include_router(order.router)
 
     # Сбрасываем накопившиеся апдейты: иначе после долгого простоя бот
     # начнёт отвечать на сообщения недельной давности.
