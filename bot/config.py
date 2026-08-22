@@ -25,12 +25,23 @@ def load_config() -> Config:
     """
     load_dotenv()
 
-    token = os.getenv("BOT_TOKEN")
+    # strip() — при копировании в конец строки часто попадает пробел
+    # или перенос. Сам по себе он безобиден, но aiogram отвергает такой
+    # токен с невнятным «Token is invalid! It can't contains spaces».
+    token = os.getenv("BOT_TOKEN", "").strip()
+
     if not token:
         raise RuntimeError(
             "Не найден BOT_TOKEN.\n"
             "Скопируй .env.example в .env (cp .env.example .env) "
             "и вставь токен, который выдал @BotFather."
+        )
+
+    if any(char.isspace() for char in token):
+        raise RuntimeError(
+            "В BOT_TOKEN попал пробел или перенос строки.\n"
+            "Токен — это одна сплошная строка вида 123456789:AAH...\n"
+            "Скорее всего при вставке скопировалось лишнее. Впиши токен заново."
         )
 
     raw_admin_id = os.getenv("ADMIN_ID", "").strip()
