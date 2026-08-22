@@ -1,8 +1,11 @@
 """Каталог товаров: команда /catalog и нажатия на кнопки."""
 
+from contextlib import suppress
+
 from aiogram import F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 from bot.catalog import all_products, find_product, format_product
 from bot.keyboards.catalog import (
@@ -33,11 +36,12 @@ async def show_product(callback: CallbackQuery, callback_data: ProductCallback) 
         await callback.answer("Такого товара больше нет", show_alert=True)
         return
 
-    if isinstance(callback.message, Message):
-        await callback.message.edit_text(
-            format_product(product),
-            reply_markup=product_keyboard(product.id),
-        )
+    await _replace_message(
+        callback,
+        text=format_product(product),
+        reply_markup=product_keyboard(product.id),
+        photo=product.photo,
+    )
 
     # Telegram ждёт ответа на каждое нажатие. Без этой строки у пользователя
     # будет крутиться часик на кнопке, пока не отвалится по таймауту.
@@ -47,10 +51,38 @@ async def show_product(callback: CallbackQuery, callback_data: ProductCallback) 
 @router.callback_query(CatalogCallback.filter(F.action == "back"))
 async def back_to_catalog(callback: CallbackQuery) -> None:
     """Нажали «назад» — вернуть список товаров."""
-    if isinstance(callback.message, Message):
-        await callback.message.edit_text(
-            CATALOG_TITLE,
-            reply_markup=catalog_keyboard(all_products()),
-        )
+    await _replace_message(
+        callback,
+        text=CATALOG_TITLE,
+        reply_markup=catalog_keyboard(all_products()),
+    )
 
     await callback.answer()
+
+
+async def _replace_message(
+    callback: CallbackQuery,
+    text: str,
+    reply_markup: InlineKeyboardMarkup,
+    photo: str | None = None,
+) -> None:
+    """Заменить сообщение: удалить старое и отправить новое.
+
+    Через edit_text нельзя превратить сообщение с фотографией в текстовое
+    и наоборот — Telegram этого не разрешает. Поэтому заменяем целиком,
+    а не редактируем: так одинаково работает и для товаров с фото, и без.
+    """
+    message = callback.message
+
+    if not isinstance(message, Message):
+        return  # сообщение слишком старое, Telegram его уже не отдаёт
+
+    # Удаление может не пройти: сообщения старше двух суток удалять нельзя.
+    # Это не повод ломать показ товара — просто оставим старое в чате.
+    with suppress(TelegramAPIError):
+        await message.delete()
+
+    if photo:
+        await message.answer_photo(photo, caption=text, reply_markup=reply_markup)
+    else:
+        await message.answer(text, reply_markup=reply_markup)

@@ -13,7 +13,9 @@ from bot.config import Config
 from bot.keyboards.order import (
     BuyCallback,
     ConfirmCallback,
+    DeliveryCallback,
     confirm_keyboard,
+    delivery_keyboard,
     phone_request_keyboard,
 )
 from bot.orders import (
@@ -97,7 +99,7 @@ async def process_phone_from_contact(message: Message, state: FSMContext) -> Non
         await message.answer("Не смог разобрать номер. Напиши его текстом:")
         return
 
-    await _ask_address(message, state, phone)
+    await _ask_delivery(message, state, phone)
 
 
 @router.message(OrderStates.phone)
@@ -108,17 +110,53 @@ async def process_phone_from_text(message: Message, state: FSMContext) -> None:
         await message.answer("Не похоже на номер телефона. Пример: +7 999 123-45-67")
         return
 
-    await _ask_address(message, state, phone)
+    await _ask_delivery(message, state, phone)
 
 
-async def _ask_address(message: Message, state: FSMContext, phone: str) -> None:
+async def _ask_delivery(message: Message, state: FSMContext, phone: str) -> None:
     """Общий шаг после телефона — чтобы не дублировать код в двух обработчиках."""
     await state.update_data(phone=phone)
-    await state.set_state(OrderStates.address)
+    await state.set_state(OrderStates.delivery)
+
+    # Сначала убираем кнопку «отправить номер»: она из обычной клавиатуры,
+    # и сама по себе при отправке inline-кнопок не исчезнет.
+    await message.answer("Принял.", reply_markup=ReplyKeyboardRemove())
     await message.answer(
-        "Куда доставить? Напиши адрес:",
-        reply_markup=ReplyKeyboardRemove(),  # убираем кнопку с телефоном
+        "Как удобнее получить заказ?", reply_markup=delivery_keyboard()
     )
+
+
+@router.callback_query(OrderStates.delivery, DeliveryCallback.filter())
+async def process_delivery(
+    callback: CallbackQuery, callback_data: DeliveryCallback, state: FSMContext
+) -> None:
+    """Выбрали доставку или самовывоз."""
+    самовывоз = callback_data.method == "pickup"
+    await state.update_data(pickup=самовывоз)
+
+    if isinstance(callback.message, Message):
+        if самовывоз:
+            # Адрес не нужен — сразу к подтверждению.
+            await state.update_data(address=None)
+            order = await _build_order(state)
+
+            if order is None:
+                await state.clear()
+                await callback.message.answer(
+                    "Что-то пошло не так, начни заново: /catalog"
+                )
+                await callback.answer()
+                return
+
+            await state.set_state(OrderStates.confirm)
+            await callback.message.answer(
+                format_order_summary(order), reply_markup=confirm_keyboard()
+            )
+        else:
+            await state.set_state(OrderStates.address)
+            await callback.message.answer("Куда доставить? Напиши адрес:")
+
+    await callback.answer()
 
 
 @router.message(OrderStates.address)
@@ -211,9 +249,19 @@ async def _build_order(state: FSMContext) -> Order | None:
     product = find_product(data.get("product_id", ""))
     name = data.get("customer_name")
     phone = data.get("phone")
+    pickup = data.get("pickup")
     address = data.get("address")
 
-    if product is None or not name or not phone or not address:
+    if product is None or not name or not phone or pickup is None:
         return None
 
-    return Order(product=product, customer_name=name, phone=phone, address=address)
+    # При доставке адрес обязателен, при самовывозе его быть не должно.
+    if not pickup and not address:
+        return None
+
+    return Order(
+        product=product,
+        customer_name=name,
+        phone=phone,
+        address=None if pickup else address,
+    )

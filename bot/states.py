@@ -9,9 +9,13 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class OrderStates(StatesGroup):
-    """Шаги оформления: имя → телефон → адрес → подтверждение."""
+    """Шаги: имя → телефон → способ получения → адрес → подтверждение.
+
+    Адрес спрашиваем не всегда: при самовывозе этот шаг пропускается.
+    """
 
     name = State()
     phone = State()
+    delivery = State()
     address = State()
     confirm = State()

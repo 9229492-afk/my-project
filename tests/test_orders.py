@@ -1,5 +1,7 @@
 """Тесты логики заказа — без Telegram и без токена."""
 
+from dataclasses import replace
+
 import pytest
 
 from bot.catalog import find_product
@@ -23,6 +25,12 @@ def заказ() -> Order:
         phone="+79991234567",
         address="Химки, ул. Ленина, 5",
     )
+
+
+@pytest.fixture
+def заказ_самовывоз(заказ) -> Order:
+    """Тот же заказ, но покупатель забирает сам — адреса нет."""
+    return replace(заказ, address=None)
 
 
 @pytest.mark.parametrize(
@@ -80,3 +88,24 @@ def test_сводка_для_покупателя_содержит_заказ(з
     assert заказ.product.name in text
     assert заказ.phone in text
     assert заказ.address in text
+
+
+def test_доставка_показывает_адрес(заказ):
+    assert заказ.самовывоз is False
+    assert заказ.способ_получения == "Доставка: Химки, ул. Ленина, 5"
+
+
+def test_самовывоз_вместо_адреса(заказ_самовывоз):
+    assert заказ_самовывоз.самовывоз is True
+    assert заказ_самовывоз.способ_получения == "Самовывоз"
+
+
+def test_в_заказе_админу_видно_что_самовывоз(заказ_самовывоз):
+    text = format_order_for_admin(заказ_самовывоз, user_id=42, username="ivan")
+
+    assert "Самовывоз" in text
+    assert "Доставка" not in text
+
+
+def test_в_сводке_покупателю_видно_что_самовывоз(заказ_самовывоз):
+    assert "Самовывоз" in format_order_summary(заказ_самовывоз)
