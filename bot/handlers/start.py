@@ -11,7 +11,13 @@ from bot.config import Config
 # Подключается к Dispatcher в bot/__main__.py.
 router = Router(name="start")
 
-HELP_TEXT = "Вот что я умею:\n\n/catalog — показать товары\n/help — эта справка"
+HELP_TEXT = (
+    "Вот что я умею:\n\n"
+    "/catalog — показать товары\n"
+    "/oferta — публичная оферта (условия покупки)\n"
+    "/vozvrat — правила возврата и обмена товара\n"
+    "/help — эта справка"
+)
 
 
 @router.message(CommandStart())

@@ -9,7 +9,7 @@ from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramAPIError
 
 from bot.config import Config, load_config
-from bot.handlers import catalog, order, start
+from bot.handlers import catalog, legal, order, start
 from bot.middlewares import LogUserMiddleware
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ async def main() -> None:
     dispatcher.include_router(start.router)
     dispatcher.include_router(catalog.router)
     dispatcher.include_router(order.router)
+    dispatcher.include_router(legal.router)
 
     # Сбрасываем накопившиеся апдейты: иначе после долгого простоя бот
     # начнёт отвечать на сообщения недельной давности.
